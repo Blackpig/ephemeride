@@ -1,0 +1,487 @@
+/*
+ * Éphéméride — CSS Custom Property Theme Tokens
+ * blackpig-creatif/ephemeride
+ *
+ * All package Blade views reference only these tokens — no hardcoded colours.
+ * Consumers override tokens in their app.css after importing this file:
+ *
+ *   @import 'vendor/blackpig-creatif/ephemeride/resources/css/ephemeride.css';
+ *
+ *   :root {
+ *     --ephemeride-color-primary:  oklch(0.65 0.12 160);
+ *     --ephemeride-radius:         0.75rem;
+ *   }
+ *
+ * Per-instance overrides via the :theme prop on <livewire:ephemeride-calendar>
+ * are applied as scoped inline CSS custom properties on the component root element,
+ * cascading only to that instance.
+ */
+
+:root {
+    /* Primary brand colour — controls, today highlight, focus rings */
+    --ephemeride-color-primary: oklch(0.55 0.2 270);
+
+    /* Calendar surface colours */
+    --ephemeride-color-surface: oklch(1 0 0);
+    --ephemeride-color-surface-alt: oklch(0.97 0 0);
+
+    /* Grid borders */
+    --ephemeride-color-border: oklch(0.9 0 0);
+
+    /* Typography */
+    --ephemeride-color-text: oklch(0.15 0 0);
+    --ephemeride-color-text-muted: oklch(0.55 0 0);
+
+    /* Today indicator */
+    --ephemeride-color-today-bg: oklch(0.55 0.2 270);
+    --ephemeride-color-today-text: oklch(1 0 0);
+
+    /* Event chips — default colour; overridden per-event via inline style */
+    --ephemeride-color-event: oklch(0.55 0.2 270);
+    --ephemeride-color-event-text: oklch(1 0 0);
+
+    /* Event popover card */
+    --ephemeride-color-popover-bg: oklch(1 0 0);
+    --ephemeride-color-popover-shadow: oklch(0 0 0 / 0.12);
+
+    /* Shape */
+    --ephemeride-radius: 0.5rem;
+
+    /* Typography — inherits from the application by default */
+    --ephemeride-font: inherit;
+}
+
+/* ============================================================
+   Base layout utilities used by Blade views
+   All sizing and layout uses relative units or calc() so the
+   calendar scales naturally within its container.
+   ============================================================ */
+
+.ephemeride {
+    font-family: var(--ephemeride-font);
+    color: var(--ephemeride-color-text);
+    background-color: var(--ephemeride-color-surface);
+    border: 1px solid var(--ephemeride-color-border);
+    border-radius: var(--ephemeride-radius);
+    overflow: hidden;
+}
+
+/* Header bar (navigation + view switcher) */
+.ephemeride-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--ephemeride-color-border);
+    background-color: var(--ephemeride-color-surface);
+}
+
+/* Navigation buttons */
+.ephemeride-nav-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.375rem 0.625rem;
+    border: 1px solid var(--ephemeride-color-border);
+    border-radius: calc(var(--ephemeride-radius) * 0.75);
+    background-color: var(--ephemeride-color-surface);
+    color: var(--ephemeride-color-text);
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.ephemeride-nav-btn:hover {
+    background-color: var(--ephemeride-color-surface-alt);
+    border-color: var(--ephemeride-color-primary);
+}
+
+.ephemeride-nav-btn:focus-visible {
+    outline: 2px solid var(--ephemeride-color-primary);
+    outline-offset: 2px;
+}
+
+/* Period label (month + year, or week number) */
+.ephemeride-period-label {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--ephemeride-color-text);
+}
+
+/* View switcher pills */
+.ephemeride-view-switcher {
+    display: inline-flex;
+    border: 1px solid var(--ephemeride-color-border);
+    border-radius: var(--ephemeride-radius);
+    overflow: hidden;
+}
+
+.ephemeride-view-btn {
+    padding: 0.25rem 0.75rem;
+    font-size: 0.875rem;
+    border: none;
+    background-color: var(--ephemeride-color-surface);
+    color: var(--ephemeride-color-text-muted);
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.ephemeride-view-btn:hover {
+    background-color: var(--ephemeride-color-surface-alt);
+}
+
+.ephemeride-view-btn[aria-pressed="true"],
+.ephemeride-view-btn.is-active {
+    background-color: var(--ephemeride-color-primary);
+    color: var(--ephemeride-color-today-text);
+}
+
+/* ============================================================
+   Month view
+   ============================================================ */
+
+.ephemeride-month-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+}
+
+/* Week row: a 7-column sub-grid containing banner row (1) + day cells row (2).
+   Row 1 (banners) auto-collapses to zero height when no multi-day events exist. */
+.ephemeride-month-week-row {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    grid-template-rows: auto 1fr;
+}
+
+.ephemeride-day-header {
+    padding: 0.5rem;
+    text-align: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--ephemeride-color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--ephemeride-color-border);
+}
+
+.ephemeride-day-cell {
+    min-height: 6rem;
+    padding: 0.375rem;
+    border-right: 1px solid var(--ephemeride-color-border);
+    border-bottom: 1px solid var(--ephemeride-color-border);
+    background-color: var(--ephemeride-color-surface);
+    vertical-align: top;
+}
+
+.ephemeride-day-cell.is-last-day {
+    border-right: none;
+}
+
+.ephemeride-day-cell.is-outside-month {
+    background-color: var(--ephemeride-color-surface-alt);
+}
+
+.ephemeride-day-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 50%;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--ephemeride-color-text);
+    margin-bottom: 0.25rem;
+}
+
+.ephemeride-day-cell.is-outside-month .ephemeride-day-number {
+    color: var(--ephemeride-color-text-muted);
+}
+
+.ephemeride-day-cell.is-today .ephemeride-day-number {
+    background-color: var(--ephemeride-color-today-bg);
+    color: var(--ephemeride-color-today-text);
+    font-weight: 700;
+}
+
+/* Event chip in month view */
+.ephemeride-event-chip {
+    position: relative;
+    display: block;
+    width: 100%;
+    padding: 0.125rem 0.375rem;
+    margin-bottom: 0.125rem;
+    border-radius: calc(var(--ephemeride-radius) * 0.5);
+    background-color: var(--ephemeride-color-event);
+    color: var(--ephemeride-color-event-text);
+    font-size: 0.75rem;
+    line-height: 1.4;
+    cursor: pointer;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    transition: opacity 0.15s ease;
+}
+
+.ephemeride-event-chip:hover {
+    opacity: 0.9;
+}
+
+.ephemeride-overflow-label {
+    font-size: 0.75rem;
+    color: var(--ephemeride-color-text-muted);
+    padding: 0.125rem 0.375rem;
+    cursor: pointer;
+}
+
+.ephemeride-overflow-label:hover {
+    color: var(--ephemeride-color-primary);
+}
+
+/* ============================================================
+   Event popover
+   ============================================================ */
+
+.ephemeride-popover {
+    position: absolute;
+    z-index: 50;
+    min-width: 16rem;
+    max-width: 22rem;
+    padding: 1rem;
+    background-color: var(--ephemeride-color-popover-bg);
+    border: 1px solid var(--ephemeride-color-border);
+    border-radius: var(--ephemeride-radius);
+    box-shadow: 0 4px 16px var(--ephemeride-color-popover-shadow);
+}
+
+.ephemeride-popover-title {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--ephemeride-color-text);
+    margin-bottom: 0.25rem;
+}
+
+.ephemeride-popover-meta {
+    font-size: 0.8125rem;
+    color: var(--ephemeride-color-text-muted);
+    margin-bottom: 0.5rem;
+}
+
+.ephemeride-popover-category {
+    display: inline-block;
+    padding: 0.125rem 0.5rem;
+    border-radius: calc(var(--ephemeride-radius) * 0.5);
+    background-color: var(--ephemeride-color-event);
+    color: var(--ephemeride-color-event-text);
+    font-size: 0.75rem;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+}
+
+.ephemeride-popover-image {
+    width: 100%;
+    border-radius: calc(var(--ephemeride-radius) * 0.75);
+    object-fit: cover;
+    margin-bottom: 0.5rem;
+    max-height: 8rem;
+}
+
+.ephemeride-popover-description {
+    font-size: 0.8125rem;
+    color: var(--ephemeride-color-text-muted);
+    margin-bottom: 0.75rem;
+    line-height: 1.5;
+}
+
+.ephemeride-popover-cta {
+    display: inline-block;
+    padding: 0.375rem 0.875rem;
+    border-radius: calc(var(--ephemeride-radius) * 0.75);
+    background-color: var(--ephemeride-color-primary);
+    color: oklch(1 0 0);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: opacity 0.15s ease;
+}
+
+.ephemeride-popover-cta:hover {
+    opacity: 0.9;
+}
+
+/* ============================================================
+   Category filter bar
+   ============================================================ */
+
+.ephemeride-filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--ephemeride-color-border);
+    background-color: var(--ephemeride-color-surface);
+}
+
+.ephemeride-filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.75rem;
+    border: 1px solid var(--ephemeride-color-border);
+    border-radius: 9999px;
+    font-size: 0.8125rem;
+    cursor: pointer;
+    background-color: var(--ephemeride-color-surface);
+    color: var(--ephemeride-color-text-muted);
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.ephemeride-filter-chip:hover,
+.ephemeride-filter-chip.is-active {
+    background-color: var(--ephemeride-color-event);
+    border-color: var(--ephemeride-color-event);
+    color: var(--ephemeride-color-event-text);
+}
+
+/* ============================================================
+   Week view (CSS Grid — not a table)
+   ============================================================ */
+
+.ephemeride-week-wrapper {
+    overflow-y: auto;
+}
+
+.ephemeride-week-allday-row {
+    display: grid;
+    grid-template-columns: 4rem repeat(7, 1fr);
+    border-bottom: 2px solid var(--ephemeride-color-border);
+    background-color: var(--ephemeride-color-surface-alt);
+}
+
+.ephemeride-week-allday-label {
+    padding: 0.5rem;
+    font-size: 0.75rem;
+    color: var(--ephemeride-color-text-muted);
+    border-right: 1px solid var(--ephemeride-color-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ephemeride-week-allday-cell {
+    padding: 0.25rem;
+    border-right: 1px solid var(--ephemeride-color-border);
+    min-height: 2rem;
+}
+
+.ephemeride-week-day-headers {
+    display: grid;
+    grid-template-columns: 4rem repeat(7, 1fr);
+    border-bottom: 1px solid var(--ephemeride-color-border);
+    position: sticky;
+    top: 0;
+    background-color: var(--ephemeride-color-surface);
+    z-index: 10;
+}
+
+.ephemeride-week-day-header-cell {
+    padding: 0.5rem;
+    text-align: center;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--ephemeride-color-text-muted);
+    border-right: 1px solid var(--ephemeride-color-border);
+}
+
+.ephemeride-week-day-header-cell.is-today {
+    color: var(--ephemeride-color-primary);
+}
+
+.ephemeride-week-day-header-cell.is-today .ephemeride-week-day-number {
+    background-color: var(--ephemeride-color-today-bg);
+    color: var(--ephemeride-color-today-text);
+    border-radius: 50%;
+    width: 1.75rem;
+    height: 1.75rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+}
+
+.ephemeride-week-grid {
+    display: grid;
+    /* col 1: time labels (4rem), cols 2–8: day columns */
+    grid-template-columns: 4rem repeat(7, 1fr);
+    position: relative;
+}
+
+.ephemeride-week-time-label {
+    padding: 0 0.5rem;
+    font-size: 0.6875rem;
+    color: var(--ephemeride-color-text-muted);
+    text-align: right;
+    border-right: 1px solid var(--ephemeride-color-border);
+    height: 3rem; /* fixed row height — matches slot height in day columns */
+    display: flex;
+    align-items: flex-start;
+    padding-top: 0.25rem;
+}
+
+.ephemeride-week-slot-cell {
+    border-right: 1px solid var(--ephemeride-color-border);
+    border-bottom: 1px solid color-mix(in oklch, var(--ephemeride-color-border), transparent 50%);
+    height: 3rem;
+}
+
+.ephemeride-week-slot-cell.is-last-day {
+    border-right: none;
+}
+
+.ephemeride-week-event {
+    /* Fill the full height of the grid-spanning parent div */
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: stretch;
+    width: 100%;
+    height: 100%;
+    text-align: left;
+    padding: 0.125rem 0.375rem;
+    border-radius: calc(var(--ephemeride-radius) * 0.5);
+    background-color: var(--ephemeride-color-event);
+    color: var(--ephemeride-color-event-text);
+    font-size: 0.75rem;
+    overflow: hidden;
+    cursor: pointer;
+    z-index: 5;
+    transition: opacity 0.15s ease;
+}
+
+.ephemeride-week-event:hover {
+    opacity: 0.9;
+    z-index: 6;
+}
+
+/* Current time indicator */
+.ephemeride-current-time-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background-color: var(--ephemeride-color-primary);
+    z-index: 20;
+    pointer-events: none;
+}
+
+.ephemeride-current-time-line::before {
+    content: '';
+    position: absolute;
+    left: -0.25rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background-color: var(--ephemeride-color-primary);
+}

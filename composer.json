@@ -1,0 +1,53 @@
+{
+    "name": "blackpig-creatif/ephemeride",
+    "description": "A Livewire calendar component for displaying events — part of the BlackpigCreatif package ecosystem",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Stuart Hallewell",
+            "email": "stuart@blackpig.eu"
+        }
+    ],
+    "require": {
+        "php": "^8.3",
+        "laravel/framework": "^12.0",
+        "livewire/livewire": "^4.0",
+        "spatie/laravel-package-tools": "^1.9",
+        "rlanvin/php-rrule": "^2.0",
+        "nesbot/carbon": "^3.0"
+    },
+    "require-dev": {
+        "pestphp/pest": "^4.0",
+        "pestphp/pest-plugin-laravel": "^4.0",
+        "pestphp/pest-plugin-livewire": "^4.0",
+        "orchestra/testbench": "^10.0",
+        "nunomaduro/larastan": "^3.0",
+        "laravel/pint": "^1.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "BlackpigCreatif\\Ephemeride\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "BlackpigCreatif\\Ephemeride\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "BlackpigCreatif\\Ephemeride\\EphemeridServiceProvider"
+            ]
+        }
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
