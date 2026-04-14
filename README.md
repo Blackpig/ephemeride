@@ -9,7 +9,7 @@ A Livewire calendar component for displaying events in month and week views, wit
 
 ## Requirements
 
-- PHP 8.3+
+- PHP 8.4+
 - Laravel 12+
 - Livewire 4+ (Alpine.js is bundled)
 
@@ -101,12 +101,16 @@ EphemerisEvent::make(
     title:       'Team Stand-up',
     startsAt:    Carbon::parse('2026-03-10 09:00'),
     endsAt:      Carbon::parse('2026-03-10 09:30'),
-    url:         'https://example.com/events/123',  // optional — activates popover CTA
-    description: 'Daily sync.',                      // optional — shown in popover body
+    url:         'https://example.com/events/123',  // optional — popover CTA and panel fallback
+    description: 'Daily sync.',                      // optional — shown in popover and panel body
     colour:      'oklch(0.55 0.2 160)',             // optional — overrides theme event colour
     category:    'Internal',                         // optional — used for filtering
     rrule:       'FREQ=WEEKLY;BYDAY=MO,WE,FR',      // optional — RFC 5545 RRULE string
-    imageUrl:    'https://example.com/thumb.jpg',    // optional — shown in popover
+    imageUrl:    'https://example.com/thumb.jpg',    // optional — shown in popover and panel
+    links:       [                                   // optional — multiple CTAs for the panel
+        ['label' => 'Book Now', 'url' => 'https://example.com/book/123', 'style' => 'primary'],
+        ['label' => 'More Info', 'url' => 'https://example.com/events/123', 'style' => 'secondary'],
+    ],
 );
 ```
 
@@ -127,6 +131,7 @@ EphemerisEvent::make(
 | `exdates` | `array` | Dates to exclude from a recurring series. |
 | `rdates` | `array` | Additional one-off dates to include in a series. |
 | `extraAttributes` | `array` | Pass-through data for consuming code or custom Blade slots. |
+| `links` | `array` | Ordered CTA links for the event panel (see [Panel Mode](#panel-mode)). |
 
 ### Computed property hooks
 
@@ -280,6 +285,131 @@ Clicking a category chip filters the rendered events to that category; clicking 
 
 ---
 
+## Event Popover
+
+By default, clicking an event chip opens an inline popover card anchored to the chip. No configuration is required.
+
+The popover shows the event title, date and time, category badge, image (when `imageUrl` is set), a truncated description, and a single CTA link (when `url` is set and `popover_cta_label` is configured).
+
+To customise the popover layout, publish the views and edit `resources/views/vendor/ephemeride/components/event-popover.blade.php`.
+
+---
+
+## Panel Mode
+
+Panel mode moves the event detail display out of the inline popover and into a separate DOM element that you place anywhere on the page. This suits layouts where the detail sits to the side of, above, or below the calendar rather than floating over it.
+
+When `target-container` is set to any non-empty string on the calendar component, clicking an event chip dispatches a browser `CustomEvent` named `ephemeride-event-selected` to `window` instead of opening a popover. Any element on the page that listens for this event can render the detail.
+
+### Step 1 -- Configure the calendar
+
+```blade
+<livewire:ephemeride-calendar
+    :provider="App\BlackpigCreatif\Ephemeride\FestivalsProvider::class"
+    target-container="event-panel"
+/>
+```
+
+### Step 2 -- Place the panel component
+
+`<x-ephemeride::event-panel />` is the default receiver. Put it wherever you want the detail to appear. It listens globally for `ephemeride-event-selected` and renders the selected event automatically.
+
+```blade
+<div class="calendar-layout">
+    <livewire:ephemeride-calendar
+        :provider="..."
+        target-container="event-panel"
+    />
+
+    <x-ephemeride::event-panel class="my-panel" />
+</div>
+```
+
+The panel is invisible when nothing is selected but always occupies layout space to prevent shift. It fades in when an event is clicked. A close button (SVG icon) clears the selection.
+
+### Multiple CTAs in the panel
+
+When the event has a `links` array the panel renders each link as a styled button instead of the single `url` CTA. Each link has three keys:
+
+| Key | Required | Description |
+|-----|----------|-------------|
+| `label` | yes | Button text |
+| `url` | yes | Link destination |
+| `style` | no | `primary` (default), `secondary`, or `ghost` |
+
+```php
+EphemerisEvent::make(
+    id: 'workshop-1',
+    title: 'Yin and Restore Afternoon',
+    startsAt: Carbon::parse('2026-04-26 14:00'),
+    endsAt: Carbon::parse('2026-04-26 17:00'),
+    links: [
+        ['label' => 'Book Now', 'url' => 'https://example.com/book/1', 'style' => 'primary'],
+        ['label' => 'More Info', 'url' => 'https://example.com/info/1', 'style' => 'secondary'],
+    ],
+)
+```
+
+If `links` is empty the panel falls back to rendering the single `url` field as a primary CTA, keeping backwards compatibility with any existing providers.
+
+### Custom panel template
+
+To use your own markup, listen for the `ephemeride-event-selected` event directly. The `event.detail` object contains the full event payload:
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `id` | string | |
+| `title` | string | |
+| `startsAt` | string | ISO 8601 |
+| `endsAt` | string | ISO 8601 |
+| `isAllDay` | bool | |
+| `formattedDate` | string | Pre-formatted, e.g. `"26 April 2026 · 14:00 -- 17:00"` |
+| `url` | string or null | Single CTA URL |
+| `links` | array | Ordered CTA links |
+| `description` | string or null | |
+| `imageUrl` | string or null | |
+| `category` | string or null | |
+| `colour` | string or null | CSS colour string |
+| `extraAttributes` | object | Any extra data from the provider |
+
+```html
+<div
+    x-data="{ event: null }"
+    @ephemeride-event-selected.window="event = $event.detail"
+>
+    <div x-show="event" x-cloak>
+        <h2 x-text="event?.title"></h2>
+        <p x-text="event?.formattedDate"></p>
+
+        {{-- Multiple CTAs --}}
+        <template x-if="event?.links?.length">
+            <div>
+                <template x-for="link in event.links" :key="link.url">
+                    <a :href="link.url" x-text="link.label"></a>
+                </template>
+            </div>
+        </template>
+
+        {{-- Single URL fallback --}}
+        <template x-if="!event?.links?.length && event?.url">
+            <a :href="event.url">View Details</a>
+        </template>
+    </div>
+</div>
+```
+
+### Panel min-height
+
+The outer panel container always reserves layout space. Override the default (10rem) for your layout:
+
+```css
+.ephemeride-panel {
+    --ephemeride-panel-min-height: 14rem;
+}
+```
+
+---
+
 ## Configuration Reference
 
 Published to `config/ephemeride.php`:
@@ -305,7 +435,8 @@ return [
     // Maximum event chips per day cell before '+X more' is shown.
     'month_max_events_per_day' => 3,
 
-    // Label for the CTA button in the event popover (shown when the event has a url).
+    // Label for the CTA button in the popover and as the panel single-url fallback.
+    // Has no effect when the event provides a `links` array.
     'popover_cta_label'        => 'View Details',
 
     // Global CSS custom property overrides. Merged with package defaults.

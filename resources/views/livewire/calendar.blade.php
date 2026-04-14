@@ -40,12 +40,14 @@
     {{-- Calendar body --}}
     @if ($view === 'month')
         @include('ephemeride::components.month-view', [
-            'grid'             => $this->grid,
-            'maxEventsPerDay'  => config('ephemeride.month_max_events_per_day', 3),
+            'grid'            => $this->grid,
+            'maxEventsPerDay' => config('ephemeride.month_max_events_per_day', 3),
+            'targetContainer' => $targetContainer,
         ])
     @elseif ($view === 'week')
         @include('ephemeride::components.week-view', [
-            'grid' => $this->grid,
+            'grid'            => $this->grid,
+            'targetContainer' => $targetContainer,
         ])
     @endif
 </div>
