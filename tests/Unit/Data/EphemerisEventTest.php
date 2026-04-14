@@ -7,7 +7,7 @@ describe('EphemerisEvent DTO', function () {
 
     it('constructs with required fields', function () {
         $startsAt = Carbon::parse('2026-03-10 09:00');
-        $endsAt   = Carbon::parse('2026-03-10 10:00');
+        $endsAt = Carbon::parse('2026-03-10 10:00');
 
         $event = new EphemerisEvent(
             id: 'test-1',
@@ -122,6 +122,195 @@ describe('EphemerisEvent DTO', function () {
             ->and($occurrence->category)->toBe('Yoga')
             ->and($occurrence->rrule)->toBeNull() // occurrences are not themselves recurring
             ->and($occurrence->extraAttributes)->toBe(['instructor' => 'Jane']);
+    });
+
+    describe('toPayload()', function () {
+
+        it('returns all expected keys', function () {
+            $event = EphemerisEvent::make(
+                id: 'test-1',
+                title: 'Morning Yoga',
+                startsAt: Carbon::parse('2026-04-21 09:00'),
+                endsAt: Carbon::parse('2026-04-21 10:00'),
+            );
+
+            $payload = $event->toPayload();
+
+            expect($payload)->toHaveKeys([
+                'id', 'title', 'startsAt', 'endsAt',
+                'isAllDay', 'formattedDate',
+                'url', 'description', 'imageUrl',
+                'category', 'colour', 'extraAttributes',
+            ]);
+        });
+
+        it('serializes Carbon dates to ISO 8601 strings', function () {
+            $event = EphemerisEvent::make(
+                id: 'test-1',
+                title: 'Test',
+                startsAt: Carbon::parse('2026-04-21 09:00:00', 'UTC'),
+                endsAt: Carbon::parse('2026-04-21 10:00:00', 'UTC'),
+            );
+
+            $payload = $event->toPayload();
+
+            expect($payload['startsAt'])->toBeString()->toContain('2026-04-21')
+                ->and($payload['endsAt'])->toBeString()->toContain('2026-04-21');
+        });
+
+        it('sets isAllDay correctly for a timed event', function () {
+            $event = EphemerisEvent::make(
+                id: 'test-1',
+                title: 'Test',
+                startsAt: Carbon::parse('2026-04-21 09:00'),
+                endsAt: Carbon::parse('2026-04-21 10:00'),
+            );
+
+            expect($event->toPayload()['isAllDay'])->toBeFalse();
+        });
+
+        it('sets isAllDay correctly for an all-day event', function () {
+            $event = EphemerisEvent::make(
+                id: 'test-1',
+                title: 'Test',
+                startsAt: Carbon::parse('2026-04-21 00:00'),
+                endsAt: Carbon::parse('2026-04-22 00:00'),
+            );
+
+            expect($event->toPayload()['isAllDay'])->toBeTrue();
+        });
+
+        it('formats date display for a timed event', function () {
+            $event = EphemerisEvent::make(
+                id: 'test-1',
+                title: 'Test',
+                startsAt: Carbon::parse('2026-04-21 09:00'),
+                endsAt: Carbon::parse('2026-04-21 10:30'),
+            );
+
+            $payload = $event->toPayload();
+
+            expect($payload['formattedDate'])->toContain('21')
+                ->and($payload['formattedDate'])->toContain('09:00')
+                ->and($payload['formattedDate'])->toContain('10:30');
+        });
+
+        it('formats date display for a single-day all-day event', function () {
+            $event = EphemerisEvent::make(
+                id: 'test-1',
+                title: 'Test',
+                startsAt: Carbon::parse('2026-04-21 00:00'),
+                endsAt: Carbon::parse('2026-04-22 00:00'),
+            );
+
+            $payload = $event->toPayload();
+
+            // A single-day all-day event's endsAt is midnight next day — both dates appear
+            expect($payload['formattedDate'])->toContain('21');
+        });
+
+        it('formats date display for a multi-day all-day event with date range', function () {
+            $event = EphemerisEvent::make(
+                id: 'retreat',
+                title: 'Spring Retreat',
+                startsAt: Carbon::parse('2026-04-12 00:00'),
+                endsAt: Carbon::parse('2026-04-15 00:00'),
+            );
+
+            $payload = $event->toPayload();
+
+            expect($payload['formattedDate'])->toContain('12')
+                ->and($payload['formattedDate'])->toContain('15');
+        });
+
+        it('includes optional fields in the payload', function () {
+            $event = EphemerisEvent::make(
+                id: 'test-1',
+                title: 'Workshop',
+                startsAt: Carbon::parse('2026-04-26 14:00'),
+                endsAt: Carbon::parse('2026-04-26 17:00'),
+                url: 'https://example.com/book',
+                description: 'A deep afternoon workshop.',
+                imageUrl: 'https://example.com/image.jpg',
+                category: 'Workshop',
+                colour: 'oklch(0.75 0.18 90)',
+                extraAttributes: ['price' => '€45'],
+            );
+
+            $payload = $event->toPayload();
+
+            expect($payload['url'])->toBe('https://example.com/book')
+                ->and($payload['description'])->toBe('A deep afternoon workshop.')
+                ->and($payload['imageUrl'])->toBe('https://example.com/image.jpg')
+                ->and($payload['category'])->toBe('Workshop')
+                ->and($payload['colour'])->toBe('oklch(0.75 0.18 90)')
+                ->and($payload['extraAttributes'])->toBe(['price' => '€45']);
+        });
+
+        it('returns null for absent optional fields', function () {
+            $event = EphemerisEvent::make(
+                id: 'test-1',
+                title: 'Test',
+                startsAt: Carbon::now(),
+                endsAt: Carbon::now()->addHour(),
+            );
+
+            $payload = $event->toPayload();
+
+            expect($payload['url'])->toBeNull()
+                ->and($payload['description'])->toBeNull()
+                ->and($payload['imageUrl'])->toBeNull()
+                ->and($payload['category'])->toBeNull()
+                ->and($payload['colour'])->toBeNull()
+                ->and($payload['extraAttributes'])->toBe([]);
+        });
+
+        it('includes links array in the payload', function () {
+            $links = [
+                ['label' => 'Book Now', 'url' => 'https://example.com/book', 'style' => 'primary'],
+                ['label' => 'More Info', 'url' => 'https://example.com/info', 'style' => 'secondary'],
+            ];
+
+            $event = EphemerisEvent::make(
+                id: 'test-1',
+                title: 'Test',
+                startsAt: Carbon::now(),
+                endsAt: Carbon::now()->addHour(),
+                links: $links,
+            );
+
+            expect($event->toPayload()['links'])->toBe($links);
+        });
+
+        it('defaults links to an empty array', function () {
+            $event = EphemerisEvent::make(
+                id: 'test-1',
+                title: 'Test',
+                startsAt: Carbon::now(),
+                endsAt: Carbon::now()->addHour(),
+            );
+
+            expect($event->toPayload()['links'])->toBe([]);
+        });
+
+    });
+
+    it('withDate() preserves links', function () {
+        $links = [
+            ['label' => 'Book', 'url' => 'https://example.com/book', 'style' => 'primary'],
+        ];
+
+        $original = EphemerisEvent::make(
+            id: 'test',
+            title: 'Test',
+            startsAt: Carbon::parse('2026-03-10 09:00'),
+            endsAt: Carbon::parse('2026-03-10 10:00'),
+            links: $links,
+        );
+
+        $occurrence = $original->withDate(Carbon::parse('2026-03-17 09:00'));
+
+        expect($occurrence->links)->toBe($links);
     });
 
     it('withDate() preserves duration across DST boundaries', function () {

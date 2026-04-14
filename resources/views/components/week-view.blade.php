@@ -1,4 +1,4 @@
-@props(['grid'])
+@props(['grid', 'targetContainer' => null])
 
 @php
     $days        = $grid['days'];
@@ -53,7 +53,7 @@
                     $colSpan  = $placement['colSpan'];
                 @endphp
                 <div style="grid-column: {{ $colStart }} / span {{ $colSpan }}; grid-row: 1; padding: 2px 4px; min-width: 0; z-index: 1;">
-                    @include('ephemeride::components.event-chip', ['event' => $event])
+                    @include('ephemeride::components.event-chip', ['event' => $event, 'targetContainer' => $targetContainer ?? null])
                 </div>
             @endforeach
         </div>
@@ -106,44 +106,63 @@
                 $chipStyle = $event->colour ? "--ephemeride-color-event: {$event->colour};" : '';
             @endphp
 
-            <div
-                x-data="{ open: false }"
-                style="grid-column: {{ $col }}; grid-row: {{ $rowStart }} / span {{ $rowSpan }}; position: relative; padding: 0 2px;"
-            >
-                <button
-                    type="button"
-                    class="ephemeride-week-event"
-                    @if ($chipStyle) style="width: 100%; {{ $chipStyle }}" @else style="width: 100%;" @endif
-                    @click="open = !open"
-                    @keydown.escape="open = false"
-                    aria-haspopup="dialog"
-                    :aria-expanded="open"
-                    title="{{ $event->title }}"
-                >
-                    <div style="font-weight: 500; line-height: 1.3;">{{ $event->title }}</div>
-                    @if ($rowSpan > 1)
-                        <div style="font-size: 0.6875rem; opacity: 0.85;">{{ $event->formattedTimeRange }}</div>
-                    @endif
-                </button>
-
-                <div
-                    x-show="open"
-                    x-transition:enter="transition ease-out duration-100"
-                    x-transition:enter-start="opacity-0 scale-95"
-                    x-transition:enter-end="opacity-100 scale-100"
-                    x-transition:leave="transition ease-in duration-75"
-                    x-transition:leave-start="opacity-100 scale-100"
-                    x-transition:leave-end="opacity-0 scale-95"
-                    @click.away="open = false"
-                    @keydown.escape.window="open = false"
-                    style="display: none; position: absolute; top: 100%; left: 0; z-index: 50;"
-                    role="dialog"
-                    aria-modal="false"
-                    aria-label="{{ $event->title }}"
-                >
-                    @include('ephemeride::components.event-popover', ['event' => $event])
+            @if ($targetContainer ?? null)
+                {{-- Panel mode: dispatch to target container, no inline popover --}}
+                <div style="grid-column: {{ $col }}; grid-row: {{ $rowStart }} / span {{ $rowSpan }}; position: relative; padding: 0 2px;">
+                    <button
+                        type="button"
+                        class="ephemeride-week-event"
+                        @if ($chipStyle) style="width: 100%; {{ $chipStyle }}" @else style="width: 100%;" @endif
+                        @click="window.dispatchEvent(new CustomEvent('ephemeride-event-selected', { bubbles: true, detail: @js($event->toPayload()) }))"
+                        title="{{ $event->title }}"
+                    >
+                        <div style="font-weight: 500; line-height: 1.3;">{{ $event->title }}</div>
+                        @if ($rowSpan > 1)
+                            <div style="font-size: 0.6875rem; opacity: 0.85;">{{ $event->formattedTimeRange }}</div>
+                        @endif
+                    </button>
                 </div>
-            </div>
+            @else
+                {{-- Default mode: inline popover --}}
+                <div
+                    x-data="{ open: false }"
+                    style="grid-column: {{ $col }}; grid-row: {{ $rowStart }} / span {{ $rowSpan }}; position: relative; padding: 0 2px;"
+                >
+                    <button
+                        type="button"
+                        class="ephemeride-week-event"
+                        @if ($chipStyle) style="width: 100%; {{ $chipStyle }}" @else style="width: 100%;" @endif
+                        @click="open = !open"
+                        @keydown.escape="open = false"
+                        aria-haspopup="dialog"
+                        :aria-expanded="open"
+                        title="{{ $event->title }}"
+                    >
+                        <div style="font-weight: 500; line-height: 1.3;">{{ $event->title }}</div>
+                        @if ($rowSpan > 1)
+                            <div style="font-size: 0.6875rem; opacity: 0.85;">{{ $event->formattedTimeRange }}</div>
+                        @endif
+                    </button>
+
+                    <div
+                        x-show="open"
+                        x-transition:enter="transition ease-out duration-100"
+                        x-transition:enter-start="opacity-0 scale-95"
+                        x-transition:enter-end="opacity-100 scale-100"
+                        x-transition:leave="transition ease-in duration-75"
+                        x-transition:leave-start="opacity-100 scale-100"
+                        x-transition:leave-end="opacity-0 scale-95"
+                        @click.away="open = false"
+                        @keydown.escape.window="open = false"
+                        style="display: none; position: absolute; top: 100%; left: 0; z-index: 50;"
+                        role="dialog"
+                        aria-modal="false"
+                        aria-label="{{ $event->title }}"
+                    >
+                        @include('ephemeride::components.event-popover', ['event' => $event])
+                    </div>
+                </div>
+            @endif
         @endforeach
     </div>
 </div>

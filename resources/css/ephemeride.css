@@ -63,7 +63,6 @@
     background-color: var(--ephemeride-color-surface);
     border: 1px solid var(--ephemeride-color-border);
     border-radius: var(--ephemeride-radius);
-    overflow: hidden;
 }
 
 /* Header bar (navigation + view switcher) */
@@ -75,6 +74,8 @@
     padding: 0.75rem 1rem;
     border-bottom: 1px solid var(--ephemeride-color-border);
     background-color: var(--ephemeride-color-surface);
+    border-radius: var(--ephemeride-radius) var(--ephemeride-radius) 0 0;
+    overflow: hidden;
 }
 
 /* Navigation buttons */
@@ -143,6 +144,17 @@
 .ephemeride-month-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
+}
+
+/* Round only the bottom corner cells so child backgrounds don't bleed into the
+   outer .ephemeride border-radius without needing overflow: hidden on the grid
+   (which would clip the event popover). */
+.ephemeride-month-week-row:last-child .ephemeride-day-cell:nth-child(1 of .ephemeride-day-cell) {
+    border-bottom-left-radius: calc(var(--ephemeride-radius) - 1px);
+}
+
+.ephemeride-month-week-row:last-child .ephemeride-day-cell.is-last-day {
+    border-bottom-right-radius: calc(var(--ephemeride-radius) - 1px);
 }
 
 /* Week row: a 7-column sub-grid containing banner row (1) + day cells row (2).
@@ -349,6 +361,7 @@
 
 .ephemeride-week-wrapper {
     overflow-y: auto;
+    border-radius: 0 0 var(--ephemeride-radius) var(--ephemeride-radius);
 }
 
 .ephemeride-week-allday-row {
@@ -461,6 +474,184 @@
 .ephemeride-week-event:hover {
     opacity: 0.9;
     z-index: 6;
+}
+
+/* ============================================================
+   Event panel — remote target container
+   ============================================================
+
+   The outer .ephemeride-panel always occupies layout space to prevent shift.
+   The inner .ephemeride-panel-inner is invisible until an event is selected,
+   then fades in via the .is-visible class toggled by Alpine.
+
+   Consumers can set --ephemeride-panel-min-height to control the reserved space.
+   ============================================================ */
+
+.ephemeride-panel {
+    font-family: var(--ephemeride-font);
+    color: var(--ephemeride-color-text);
+    min-height: var(--ephemeride-panel-min-height, 10rem);
+}
+
+.ephemeride-panel-inner {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 1.25rem;
+    align-items: start;
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+.ephemeride-panel-inner.is-visible {
+    visibility: visible;
+    opacity: 1;
+}
+
+/* Left column: all event content */
+.ephemeride-panel-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    min-width: 0;
+}
+
+/* Right column: close button + optional CTA */
+.ephemeride-panel-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.75rem;
+    flex-shrink: 0;
+}
+
+.ephemeride-panel-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border: 1px solid var(--ephemeride-color-border);
+    border-radius: calc(var(--ephemeride-radius) * 0.75);
+    background-color: var(--ephemeride-color-surface);
+    color: var(--ephemeride-color-text-muted);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.ephemeride-panel-close:hover {
+    background-color: var(--ephemeride-color-surface-alt);
+    border-color: var(--ephemeride-color-primary);
+    color: var(--ephemeride-color-text);
+}
+
+.ephemeride-panel-close:focus-visible {
+    outline: 2px solid var(--ephemeride-color-primary);
+    outline-offset: 2px;
+}
+
+.ephemeride-panel-category {
+    display: inline-block;
+    padding: 0.125rem 0.5rem;
+    border-radius: calc(var(--ephemeride-radius) * 0.5);
+    background-color: var(--ephemeride-color-event);
+    color: var(--ephemeride-color-event-text);
+    font-size: 0.75rem;
+    font-weight: 500;
+    width: fit-content;
+}
+
+.ephemeride-panel-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--ephemeride-color-text);
+    line-height: 1.2;
+}
+
+.ephemeride-panel-meta {
+    font-size: 0.875rem;
+    color: var(--ephemeride-color-text-muted);
+}
+
+.ephemeride-panel-image {
+    width: 100%;
+    border-radius: calc(var(--ephemeride-radius) * 0.75);
+    object-fit: cover;
+    max-height: 12rem;
+    margin-top: 0.25rem;
+}
+
+.ephemeride-panel-description {
+    font-size: 0.9375rem;
+    color: var(--ephemeride-color-text-muted);
+    line-height: 1.6;
+    margin-top: 0.25rem;
+}
+
+/* CTA links container */
+.ephemeride-panel-ctas {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+    width: 100%;
+}
+
+.ephemeride-panel-ctas-inner {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+/* Base CTA — shared shape, typography, and transition */
+.ephemeride-panel-cta {
+    display: inline-block;
+    padding: 0.5rem 1.25rem;
+    border-radius: calc(var(--ephemeride-radius) * 0.75);
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-decoration: none;
+    white-space: nowrap;
+    text-align: center;
+    border: 1px solid transparent;
+    transition: opacity 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+    cursor: pointer;
+}
+
+/* Primary (default) — solid filled */
+.ephemeride-panel-cta--primary {
+    background-color: var(--ephemeride-color-primary);
+    color: oklch(1 0 0);
+    border-color: var(--ephemeride-color-primary);
+}
+
+.ephemeride-panel-cta--primary:hover {
+    opacity: 0.9;
+}
+
+/* Secondary — outlined */
+.ephemeride-panel-cta--secondary {
+    background-color: transparent;
+    color: var(--ephemeride-color-primary);
+    border-color: var(--ephemeride-color-primary);
+}
+
+.ephemeride-panel-cta--secondary:hover {
+    background-color: var(--ephemeride-color-primary);
+    color: oklch(1 0 0);
+}
+
+/* Ghost — text only */
+.ephemeride-panel-cta--ghost {
+    background-color: transparent;
+    color: var(--ephemeride-color-text-muted);
+    border-color: transparent;
+    padding-inline: 0;
+}
+
+.ephemeride-panel-cta--ghost:hover {
+    color: var(--ephemeride-color-primary);
 }
 
 /* Current time indicator */

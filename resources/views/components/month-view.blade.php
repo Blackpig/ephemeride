@@ -1,6 +1,7 @@
 @props([
     'grid'            => [],
     'maxEventsPerDay' => 3,
+    'targetContainer' => null,
 ])
 
 @php
@@ -56,7 +57,7 @@
                     $colSpan     = $placement['colSpan'];
                 @endphp
                 <div style="grid-column: {{ $colStart }} / span {{ $colSpan }}; grid-row: 1; padding: 1px 4px; min-width: 0; z-index: 1;">
-                    @include('ephemeride::components.event-chip', ['event' => $bannerEvent])
+                    @include('ephemeride::components.event-chip', ['event' => $bannerEvent, 'targetContainer' => $targetContainer ?? null])
                 </div>
             @endforeach
 
@@ -84,7 +85,7 @@
                     </div>
 
                     @foreach ($visibleEvents as $event)
-                        @include('ephemeride::components.event-chip', ['event' => $event])
+                        @include('ephemeride::components.event-chip', ['event' => $event, 'targetContainer' => $targetContainer ?? null])
                     @endforeach
 
                     @if ($overflowCount > 0)

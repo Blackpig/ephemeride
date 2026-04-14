@@ -22,16 +22,16 @@ describe('Calendar Livewire component', function () {
     it('throws when provider class does not exist', function () {
         // Livewire may wrap exceptions from mount() in a ViewException.
         // We test for the exception message rather than the exact class.
-        expect(fn () =>
-            Livewire::test(Calendar::class, [
+        expect(
+            fn () => Livewire::test(Calendar::class, [
                 'provider' => 'App\\NonExistent\\Provider',
             ])
         )->toThrow(\Exception::class, 'does not exist');
     });
 
     it('throws when provider does not implement ProvidesEphemerides', function () {
-        expect(fn () =>
-            Livewire::test(Calendar::class, [
+        expect(
+            fn () => Livewire::test(Calendar::class, [
                 'provider' => \stdClass::class,
             ])
         )->toThrow(\Exception::class, 'ProvidesEphemerides');
@@ -44,7 +44,7 @@ describe('Calendar Livewire component', function () {
 
     it('mounts with a specified default view', function () {
         Livewire::test(Calendar::class, [
-            'provider'    => TestEventProvider::class,
+            'provider' => TestEventProvider::class,
             'defaultView' => 'week',
         ])->assertSet('view', 'week');
     });
@@ -60,7 +60,7 @@ describe('Calendar Livewire component', function () {
     it('previousPeriod() decrements the month', function () {
         $now = Carbon::now();
         $expectedMonth = $now->copy()->subMonth()->month;
-        $expectedYear  = $now->copy()->subMonth()->year;
+        $expectedYear = $now->copy()->subMonth()->year;
 
         Livewire::test(Calendar::class, ['provider' => TestEventProvider::class])
             ->call('previousPeriod')
@@ -80,7 +80,7 @@ describe('Calendar Livewire component', function () {
     it('nextPeriod() increments the month', function () {
         $now = Carbon::now();
         $expectedMonth = $now->copy()->addMonth()->month;
-        $expectedYear  = $now->copy()->addMonth()->year;
+        $expectedYear = $now->copy()->addMonth()->year;
 
         Livewire::test(Calendar::class, ['provider' => TestEventProvider::class])
             ->call('nextPeriod')
@@ -118,7 +118,7 @@ describe('Calendar Livewire component', function () {
     it('switchView() ignores a view not in $views', function () {
         Livewire::test(Calendar::class, [
             'provider' => TestEventProvider::class,
-            'views'    => ['month'],
+            'views' => ['month'],
         ])
             ->call('switchView', 'week')
             ->assertSet('view', 'month'); // unchanged
@@ -151,14 +151,14 @@ describe('Calendar Livewire component', function () {
     it('does not render the view switcher when only one view is configured', function () {
         Livewire::test(Calendar::class, [
             'provider' => TestEventProvider::class,
-            'views'    => ['month'],
+            'views' => ['month'],
         ])->assertDontSee('ephemeride-view-switcher', false);
     });
 
     it('applies inline theme CSS custom properties on the root element', function () {
         Livewire::test(Calendar::class, [
             'provider' => TestEventProvider::class,
-            'theme'    => ['color-primary' => 'oklch(0.65 0.12 160)'],
+            'theme' => ['color-primary' => 'oklch(0.65 0.12 160)'],
         ])->assertSee('--ephemeride-color-primary: oklch(0.65 0.12 160)', false);
     });
 
@@ -176,14 +176,83 @@ describe('Calendar Livewire component', function () {
         ));
 
         Livewire::test(Calendar::class, [
-            'provider'   => TestEventProvider::class,
+            'provider' => TestEventProvider::class,
             'filterable' => false,
         ])->assertDontSee('ephemeride-filter-bar', false);
     });
 
+    describe('targetContainer prop', function () {
+
+        it('defaults to null', function () {
+            Livewire::test(Calendar::class, ['provider' => TestEventProvider::class])
+                ->assertSet('targetContainer', null);
+        });
+
+        it('accepts a truthy string value', function () {
+            Livewire::test(Calendar::class, [
+                'provider' => TestEventProvider::class,
+                'targetContainer' => 'event-panel',
+            ])->assertSet('targetContainer', 'event-panel');
+        });
+
+        it('omits inline popovers from rendered HTML when set', function () {
+            app()->bind(TestEventProvider::class, fn () => new TestEventProvider(
+                collect([
+                    EphemerisEvent::make(
+                        id: 'e1',
+                        title: 'Morning Yoga',
+                        startsAt: Carbon::now()->startOfMonth()->setTime(9, 0),
+                        endsAt: Carbon::now()->startOfMonth()->setTime(10, 0),
+                    ),
+                ])
+            ));
+
+            Livewire::test(Calendar::class, [
+                'provider' => TestEventProvider::class,
+                'targetContainer' => 'event-panel',
+            ])->assertDontSee('ephemeride-popover', false);
+        });
+
+        it('renders inline popovers when targetContainer is null', function () {
+            app()->bind(TestEventProvider::class, fn () => new TestEventProvider(
+                collect([
+                    EphemerisEvent::make(
+                        id: 'e1',
+                        title: 'Morning Yoga',
+                        startsAt: Carbon::now()->startOfMonth()->setTime(9, 0),
+                        endsAt: Carbon::now()->startOfMonth()->setTime(10, 0),
+                    ),
+                ])
+            ));
+
+            Livewire::test(Calendar::class, [
+                'provider' => TestEventProvider::class,
+            ])->assertSee('ephemeride-popover', false);
+        });
+
+        it('emits the CustomEvent dispatch call in rendered HTML when set', function () {
+            app()->bind(TestEventProvider::class, fn () => new TestEventProvider(
+                collect([
+                    EphemerisEvent::make(
+                        id: 'e1',
+                        title: 'Morning Yoga',
+                        startsAt: Carbon::now()->startOfMonth()->setTime(9, 0),
+                        endsAt: Carbon::now()->startOfMonth()->setTime(10, 0),
+                    ),
+                ])
+            ));
+
+            Livewire::test(Calendar::class, [
+                'provider' => TestEventProvider::class,
+                'targetContainer' => 'event-panel',
+            ])->assertSee('ephemeride-event-selected', false);
+        });
+
+    });
+
     it('week navigation: previousPeriod() decrements the ISO week', function () {
         Livewire::test(Calendar::class, [
-            'provider'    => TestEventProvider::class,
+            'provider' => TestEventProvider::class,
             'defaultView' => 'week',
         ])
             ->set('year', 2026)
@@ -194,7 +263,7 @@ describe('Calendar Livewire component', function () {
 
     it('week navigation: nextPeriod() increments the ISO week', function () {
         Livewire::test(Calendar::class, [
-            'provider'    => TestEventProvider::class,
+            'provider' => TestEventProvider::class,
             'defaultView' => 'week',
         ])
             ->set('year', 2026)

@@ -29,6 +29,15 @@ class Calendar extends Component
     public bool $filterable = false;
 
     /**
+     * CSS selector (or any truthy string identifier) of the target DOM element
+     * that should receive event details on click, instead of showing an inline
+     * popover. When null (default), the popover behaviour is used. When set,
+     * clicking an event chip dispatches a browser `ephemeride-event-selected`
+     * CustomEvent to window with the event payload as `detail`.
+     */
+    public ?string $targetContainer = null;
+
+    /**
      * Per-instance CSS custom property overrides.
      * Keys are bare token names (e.g. 'color-primary'), values are CSS colour strings.
      * These are merged over the global config('ephemeride.theme') defaults and
@@ -63,10 +72,12 @@ class Calendar extends Component
         ?string $defaultView = null,
         bool $filterable = false,
         array $theme = [],
+        ?string $targetContainer = null,
     ): void {
         $this->provider = $provider;
         $this->filterable = $filterable;
         $this->theme = $theme;
+        $this->targetContainer = $targetContainer;
 
         $this->views = $views ?? config('ephemeride.views', ['month', 'week']);
         $activeView = $defaultView ?? config('ephemeride.default_view', 'month');
@@ -288,6 +299,6 @@ class Calendar extends Component
             $declarations[] = "--ephemeride-{$key}: {$value}";
         }
 
-        return implode('; ', $declarations).';';
+        return implode('; ', $declarations) . ';';
     }
 }

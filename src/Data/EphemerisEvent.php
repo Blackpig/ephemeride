@@ -28,7 +28,7 @@ final class EphemerisEvent
      * Computed via PHP 8.4 property hook — no backing storage.
      */
     public string $formattedTimeRange {
-        get => $this->startsAt->format('H:i').' – '.$this->endsAt->format('H:i');
+        get => $this->startsAt->format('H:i') . ' – ' . $this->endsAt->format('H:i');
     }
 
     /**
@@ -42,6 +42,13 @@ final class EphemerisEvent
             && $this->endsAt->minute === 0;
     }
 
+    /**
+     * @param  array<int, array{label: string, url: string, style?: 'primary'|'secondary'|'ghost'}>  $links
+     *                                                                                                       Ordered list of CTA links for the event panel. When provided the panel renders these
+     *                                                                                                       instead of the single $url field. Each entry requires `label` and `url`; `style`
+     *                                                                                                       defaults to 'primary'. Valid styles: 'primary', 'secondary', 'ghost'.
+     * @param  array<string, mixed>  $extraAttributes  Arbitrary extra data passed through to views.
+     */
     public function __construct(
         public readonly string $id,
         public readonly string $title,
@@ -56,21 +63,14 @@ final class EphemerisEvent
         public readonly array $exdates = [],
         public readonly array $rdates = [],
         public readonly array $extraAttributes = [],
+        public readonly array $links = [],
     ) {}
 
     /**
      * Named constructor for fluent creation with named arguments.
      *
-     * Usage:
-     *   EphemerisEvent::make(
-     *       id: 'class-42',
-     *       title: 'Morning Yoga',
-     *       startsAt: Carbon::parse('2026-03-10 09:00'),
-     *       endsAt: Carbon::parse('2026-03-10 10:00'),
-     *       colour: 'oklch(0.65 0.12 160)',
-     *       category: 'Yoga',
-     *       rrule: 'FREQ=WEEKLY;BYDAY=MO,WE,FR',
-     *   )
+     * @param  array<int, array{label: string, url: string, style?: 'primary'|'secondary'|'ghost'}>  $links
+     * @param  array<string, mixed>  $extraAttributes
      */
     public static function make(
         string $id,
@@ -86,6 +86,7 @@ final class EphemerisEvent
         array $exdates = [],
         array $rdates = [],
         array $extraAttributes = [],
+        array $links = [],
     ): self {
         return new self(
             id: $id,
@@ -101,7 +102,49 @@ final class EphemerisEvent
             exdates: $exdates,
             rdates: $rdates,
             extraAttributes: $extraAttributes,
+            links: $links,
         );
+    }
+
+    /**
+     * Serialize the event to a plain array suitable for JavaScript dispatch.
+     *
+     * Carbon instances are converted to ISO 8601 strings. Computed hook
+     * properties are evaluated and included as pre-formatted strings so the
+     * receiving panel can render without any client-side date logic.
+     *
+     * `links` takes priority over `url` in the panel template; `url` is
+     * retained in the payload for backwards-compatible custom templates.
+     *
+     * @return array<string, mixed>
+     */
+    public function toPayload(): array
+    {
+        if ($this->isAllDay) {
+            $formattedDate = $this->startsAt->isoFormat('D MMMM YYYY');
+
+            if (! $this->startsAt->isSameDay($this->endsAt)) {
+                $formattedDate .= ' – ' . $this->endsAt->isoFormat('D MMMM YYYY');
+            }
+        } else {
+            $formattedDate = $this->startsAt->isoFormat('D MMMM YYYY') . ' · ' . $this->formattedTimeRange;
+        }
+
+        return [
+            'id' => $this->id,
+            'title' => $this->title,
+            'startsAt' => $this->startsAt->toIso8601String(),
+            'endsAt' => $this->endsAt->toIso8601String(),
+            'isAllDay' => $this->isAllDay,
+            'formattedDate' => $formattedDate,
+            'url' => $this->url,
+            'links' => $this->links,
+            'description' => $this->description,
+            'imageUrl' => $this->imageUrl,
+            'category' => $this->category,
+            'colour' => $this->colour,
+            'extraAttributes' => $this->extraAttributes,
+        ];
     }
 
     /**
@@ -116,7 +159,7 @@ final class EphemerisEvent
         $duration = $this->durationInMinutes;
 
         return new self(
-            id: $this->id.'-'.$date->toDateString(),
+            id: $this->id . '-' . $date->toDateString(),
             title: $this->title,
             startsAt: $date->copy(),
             endsAt: $date->copy()->addMinutes($duration),
@@ -129,6 +172,7 @@ final class EphemerisEvent
             exdates: [],
             rdates: [],
             extraAttributes: $this->extraAttributes,
+            links: $this->links,
         );
     }
 }
